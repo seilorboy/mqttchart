@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aurinkosähkö · MQTTChart</title>
-<link rel="stylesheet" href="/static/solar.css">
-<script src="/static/solar.js" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='solar.css') }}">
+<script src="{{ url_for('static', filename='solar.js') }}" defer></script>
 </head>
-<body>
-<header><div><p class="eyebrow">MQTTCHART · SHELLY 3EM</p><h1>Aurinkosähkön vaiheet</h1></div><a href="/messages">Raakaviestit →</a></header>
+<body data-api-url="{{ url_for('solar') }}">
+<header><div><p class="eyebrow">MQTTCHART · SHELLY 3EM</p><h1>Aurinkosähkön vaiheet</h1></div><a href="{{ url_for('raw_messages') }}">Raakaviestit →</a></header>
 <div class="controls"><label>Aikaväli <select id="hours"><option value="1">Viimeinen tunti</option><option value="6" selected>Viimeiset 6 tuntia</option><option value="24">Viimeiset 24 tuntia</option></select></label><button id="refresh">Päivitä</button><span class="legend"><span class="l1">● L1</span> <span class="l2">● L2</span> <span class="l3">● L3</span></span></div>
 <p id="status" role="status">Ladataan mittauksia…</p>
 <p id="device" class="muted"></p>

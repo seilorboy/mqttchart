@@ -131,3 +131,54 @@ Kehitystestit:
 python -m pip install -r mqtt/requirements.txt
 python -m unittest discover -s tests -p 'test_*.py'
 ```
+
+## Julkaisu polussa /mqttchart/ nykyisten palvelujen rinnalla
+
+Sovellus tukee sekä suoraa osoitetta `http://localhost:8083/` että osoitetta
+`https://hanmeter.duckdns.org/mqttchart/`. Nginx poistaa pyynnöstä `/mqttchart`-
+etuliitteen ja lähettää `X-Forwarded-Prefix: /mqttchart`-otsikon.
+Sovellus käyttää sitä sivujen, staattisten tiedostojen ja API-pyyntöjen osoitteissa.
+Ilman otsikkoa sovellus toimii edelleen domainin juuressa.
+
+Mallimääritys on `nginx/hanmqtt.conf`. Palvelimella:
+
+```sh
+sudo cp nginx/hanmqtt.conf /etc/nginx/sites-available/hanmqtt.conf
+```
+
+Lisää **olemassa olevan** `hanmeter.duckdns.org`-domainin HTTPS-`server`-lohkon
+sisään seuraava rivi (vain kerran):
+
+```nginx
+include /etc/nginx/sites-available/hanmqtt.conf;
+```
+
+Älä luo uutta samannimistä HTTPS-server-lohkoa. Älä linkitä `hanmqtt.conf`-tiedostoa
+`sites-enabled`-kansioon: se sisältää vain `location`-lohkot ja kuuluu serverin
+sisälle. Säilytä nykyiset `/`, `/api/` ja `/sankey` -ohjaukset ennallaan.
+`location ^~ /mqttchart/` käsittelee ainoastaan uuden sovelluksen pyynnöt.
+Jos MQTTChart käyttää eri porttia, muuta mallin `proxy_pass` vastaamaan sitä.
+
+Säilytä `MQTT_WEB_BIND=127.0.0.1`, jotta sovellusportti on vain paikallisesti
+käytettävissä ja ulkoiset pyynnöt tulevat otsikon asettavan Nginxin kautta.
+Sovellus luottaa yhteen `X-Forwarded-Prefix`-otsikon asettavaan välityspalvelimeen.
+Raakaviestien JavaScript on erillisessä tiedostossa, joten myös se toimii
+`script-src 'self'` -suojausasetuksella.
+
+Päivitä kontti ja lataa Nginxin asetukset:
+
+```sh
+sudo docker compose --env-file .env.mqtt -f docker-compose.mqtt.yml up -d --build
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Tarkista palvelimella:
+
+```sh
+curl -fsS http://127.0.0.1:8083/health
+curl -fsS -H 'X-Forwarded-Prefix: /mqttchart' http://127.0.0.1:8083/ | grep /mqttchart/
+curl -fsS https://hanmeter.duckdns.org/mqttchart/health
+```
+
+Kuvaajat: `/mqttchart/`. Raakaviestit: `/mqttchart/messages`.
+Tarkista myös nykyinen `/sankey` selaimessa päivityksen jälkeen.

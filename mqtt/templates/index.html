@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="fi">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MQTT-mittausdata</title>
@@ -8,45 +9,14 @@ body{font:16px system-ui,sans-serif;margin:2rem auto;padding:0 1rem;max-width:12
 table{border-collapse:collapse;width:100%;background:white}td,th{text-align:left;padding:12px;border-bottom:1px solid #dde4ea;vertical-align:top}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;max-width:650px}button{padding:8px 14px;cursor:pointer}.scroll{overflow-x:auto}#status{min-height:2em}
 </style>
-<p><a href="/">Aurinkosähkön kuvaajat</a></p>
+<script src="{{ url_for('static', filename='messages.js') }}" defer></script>
+</head>
+<body data-api-url="{{ url_for('messages') }}">
+<p><a href="{{ url_for('index') }}">Aurinkosähkön kuvaajat</a></p>
 <h1>MQTT-mittausdata</h1>
 <p>Viimeiset 100 tallennettua viestiä. Näkymä päivittyy 5 sekunnin välein. Ajat näytetään selaimen aikavyöhykkeellä.</p>
 <button id="refresh">Päivitä</button>
 <p id="status" role="status">Ladataan…</p>
 <div class="scroll"><table><thead><tr><th>Vastaanotettu</th><th>Topic</th><th>Viesti</th><th>QoS / retained</th></tr></thead><tbody id="messages"></tbody></table></div>
-<script>
-let loading = false;
-async function refresh() {
-  if (loading) return;
-  loading = true;
-  try {
-    const response = await fetch('/api/messages', {signal: AbortSignal.timeout(10000)});
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    document.getElementById('status').textContent =
-      (data.subscribed && data.mqtt_connected ? 'MQTT yhdistetty.' : 'MQTT-yhteyttä tai topicin tilausta odotetaan.') +
-      ` Näytetään ${data.messages.length} viestiä.`;
-    const rows = data.messages.map(item => {
-      const tr = document.createElement('tr');
-      let payload = item.payload;
-      if (item.encoding === 'base64') payload = '[base64] ' + payload;
-      else { try { payload = JSON.stringify(JSON.parse(payload), null, 2); } catch {} }
-      for (const [i, value] of [new Date(item.received_at).toLocaleString('fi-FI'), item.topic, payload, `${item.qos} / ${item.retained ? 'kyllä' : 'ei'}`].entries()) {
-        const td = document.createElement('td');
-        const el = i === 2 ? document.createElement('pre') : td;
-        el.textContent = value;
-        if (el !== td) td.append(el);
-        tr.append(td);
-      }
-      return tr;
-    });
-    document.getElementById('messages').replaceChildren(...rows);
-  } catch (error) {
-    document.getElementById('status').textContent = 'Päivitys epäonnistui: ' + error.message + '. Näkyvät tiedot voivat olla vanhentuneita.';
-  } finally { loading = false; }
-}
-document.getElementById('refresh').addEventListener('click', refresh);
-refresh();
-setInterval(refresh, 5000);
-</script>
+</body>
 </html>

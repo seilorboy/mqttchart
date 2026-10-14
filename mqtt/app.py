@@ -10,9 +10,15 @@ from flask import Flask, jsonify, render_template, request
 import mysql.connector
 import paho.mqtt.client as mqtt
 from waitress import serve
+from werkzeug.middleware.proxy_fix import ProxyFix
 from solar import BUCKETS, aggregate, topic_map
 
 app = Flask(__name__)
+# Nginx strips the mount path and supplies this header. Keep the backend
+# bound to loopback in Compose; do not trust unrelated forwarding headers.
+app.wsgi_app = ProxyFix(
+    app.wsgi_app, x_for=0, x_proto=0, x_host=0, x_port=0, x_prefix=1,
+)
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 state = {"mqtt_connected": False, "subscribed": False}

@@ -77,7 +77,7 @@ async function refresh() {
   const status = document.getElementById('status');
   try {
     const hours = document.getElementById('hours').value;
-    const response = await fetch(`/api/solar?hours=${hours}`, {signal:active.signal});
+    const response = await fetch(`${document.body.dataset.apiUrl}?hours=${hours}`, {signal:active.signal});
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (controller !== active) return;
