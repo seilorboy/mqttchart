@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurinkosähkö · MQTTChart</title>
+<link rel="stylesheet" href="/static/solar.css">
+<script src="/static/solar.js" defer></script>
+</head>
+<body>
+<header><div><p class="eyebrow">MQTTCHART · SHELLY 3EM</p><h1>Aurinkosähkön vaiheet</h1></div><a href="/messages">Raakaviestit →</a></header>
+<div class="controls"><label>Aikaväli <select id="hours"><option value="1">Viimeinen tunti</option><option value="6" selected>Viimeiset 6 tuntia</option><option value="24">Viimeiset 24 tuntia</option></select></label><button id="refresh">Päivitä</button><span class="legend"><span class="l1">● L1</span> <span class="l2">● L2</span> <span class="l3">● L3</span></span></div>
+<p id="status" role="status">Ladataan mittauksia…</p>
+<p id="device" class="muted"></p>
+<section class="card"><h2>Vaiheiden tehot <small>W</small></h2><p id="power-latest"></p><div id="power-chart" class="chart"></div></section>
+<div class="grid"><section class="card"><h2>Virrat <small>A</small></h2><p id="current-latest"></p><div id="current-chart" class="chart"></div></section><section class="card"><h2>Jännitteet <small>V</small></h2><p id="voltage-latest"></p><div id="voltage-chart" class="chart"></div></section></div>
+<p id="resolution" class="muted"></p>
+<p class="muted">Tehon etumerkki on mittarin ilmoittama. Tuotantosuunta riippuu virtamuuntajien kytkennästä. Katkoksia ei täytetä nollilla. Ajat ovat vastaanottoaikoja selaimen aikavyöhykkeellä.</p>
+<section class="card"><h2>Energialaskurit <small>kWh</small></h2><p>Viimeisimmät valitulla aikavälillä vastaanotetut kumulatiiviset lukemat, eivät aikavälin tuotantoa. total = kulutettu energia, total_returned = palautettu energia mittarin suunnan mukaan.</p><div class="scroll"><table><thead><tr><th>Vaihe</th><th>total · kWh</th><th>Vastaanotettu</th><th>total_returned · kWh</th><th>Vastaanotettu</th></tr></thead><tbody id="energy"></tbody></table></div></section>
+</body></html>

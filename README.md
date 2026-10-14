@@ -27,11 +27,9 @@ docker compose --env-file .env.mqtt -f docker-compose.mqtt.yml up -d --build
 docker compose --env-file .env.mqtt -f docker-compose.mqtt.yml logs -f app
 ```
 
-Avaa <http://localhost:8082>. Sivulla näkyvät 100 uusinta tietokantaan
-tallennettua viestiä ja MQTT-yhteyden tila. JSON esitetään sisennettynä,
-teksti sellaisenaan ja muu binääridata base64-muodossa.
-Tämä on raakaviestien taulukkonäkymä: kulutuskuvaajan laskenta edellyttää
-mittarin viestimuodon ja yksiköiden määrittelyä.
+Avaa <http://localhost:8082> (tai asettamasi MQTT_WEB_PORT). Etusivulla ovat
+Shelly 3EM -kuvaajat. Raakaviestit löytyvät `/messages`-sivulta: JSON esitetään
+sisennettynä, teksti sellaisenaan ja muu binääridata base64-muodossa.
 
 Oletuksena selainportti on käytettävissä vain isäntäkoneella. Etäpalvelimelle
 voi tehdä SSH-tunnelin `ssh -L 8082:localhost:8082 käyttäjä@palvelin`.
@@ -80,3 +78,56 @@ curl http://localhost:8082/api/messages
 `GET /api/messages?limit=100` palauttaa uusimmat viestit (enintään 500).
 `GET /health` tarkistaa tietokannan ja raportoi MQTT-tilan; kontin terveystarkistus
 ei edellytä MQTT-yhteyttä, jotta tallennettuja tietoja voi lukea myös katkon aikana.
+
+
+## Shelly 3EM: aurinkosähkön kuvaajat
+
+Etusivu näyttää vaiheiden L1–L3 tehot (W), virrat (A) ja jännitteet (V)
+kolmessa kuvaajassa. Vaiheindeksit MQTT-topiceissa ovat 0, 1 ja 2.
+Näytettävän laitteen oletus on `shellies/shellyem3-C8C9A316D627`.
+Asetukset `.env.mqtt`-tiedostossa:
+
+```dotenv
+MQTT_TOPIC=shellies/shellyem3-C8C9A316D627/emeter/#
+SHELLY_TOPIC_PREFIX=shellies/shellyem3-C8C9A316D627
+```
+
+`MQTT_TOPIC` ohjaa vastaanottoa; `SHELLY_TOPIC_PREFIX` valitsee kuvaajissa
+näytettävän laitteen. Myös laajempi tilaus, kuten `shellies/#`, käy.
+Käytetyt topicin loppuosat ovat `/emeter/<vaihe>/power`, `/current`, `/voltage`,
+`/total` ja `/total_returned`. **Teho tulee `/power`-topicista, ei `/current`-topicista.**
+[Shellyn Gen1 API](https://shelly-api-docs.shelly.cloud/gen1/#shelly-3em-mqtt)
+määrittelee yksiköiksi W, A, V ja energialaskureille Wh.
+
+- Aikavälit: viimeinen tunti, 6 tuntia ja 24 tuntia.
+- Kuvaajissa näytekeskiarvot vastaavasti 10, 60 ja 300 sekunnin jaksoissa.
+- Päivitys 15 sekunnin välein. Pisteen kohdalla hiirellä näkyvät arvo ja aika.
+- Lukuarvot ovat viimeisimmät valitulla aikavälillä vastaanotetut mittaukset.
+- Yli kaksi minuuttia vanhat lukemat merkitään vanhoiksi.
+- Puuttuva mittaus näkyy viivana (—), ei nollana; tyhjät jaksot katkaisevat käyrän.
+- Energialaskurit näytetään erikseen kWh-muodossa (Wh / 1000), vastaanottoaikoineen.
+  Ne ovat kumulatiivisia lukemia, eivät valitun aikavälin energiamääriä.
+- Tehon etumerkkiä ei muuteta. Tuotantosuunta riippuu mittarin kytkennästä;
+  `total_returned` ei yksin todista kohteen koko aurinkosähkötuotantoa.
+
+Kuvaajat käyttävät olemassa olevaa `mqtt_messages`-taulua vastaanottoajan mukaan.
+Uutta taulua tai datan siirtoa ei tarvita. Energialukemia haetaan samalta valitulta
+aikaväliltä kuin kuvaajia. Näkymä toimii ilman ulkoisia JavaScript-CDN-palveluita.
+`GET /api/solar?hours=6` palauttaa kuvaajadatan ja viimeisimmät lukemat.
+
+Päivitys palvelimella, kun muutokset on lähetetty GitHubiin:
+
+```sh
+git pull --ff-only
+sudo docker compose --env-file .env.mqtt -f docker-compose.mqtt.yml up -d --build
+```
+
+Porttiasetus `.env.mqtt`-tiedostossa säilyy, esimerkiksi `MQTT_WEB_PORT=8083`.
+Tietokantavolyymia ei pidä poistaa päivityksessä.
+
+Kehitystestit:
+
+```sh
+python -m pip install -r mqtt/requirements.txt
+python -m unittest discover -s tests -p 'test_*.py'
+```

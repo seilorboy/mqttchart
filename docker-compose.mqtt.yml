@@ -31,6 +31,7 @@ services:
       DB_NAME: mqtt_data
       DB_USER: mqtt_app
       DB_PASSWORD: ${MQTT_DB_PASSWORD:?Set MQTT_DB_PASSWORD in .env.mqtt}
+      SHELLY_TOPIC_PREFIX: ${SHELLY_TOPIC_PREFIX:-shellies/shellyem3-C8C9A316D627}
       MQTT_HOST: ${MQTT_HOST:?Set MQTT_HOST in .env.mqtt}
       MQTT_PORT: ${MQTT_PORT:-1883}
       MQTT_USERNAME: ${MQTT_USERNAME:-}

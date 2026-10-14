@@ -4,6 +4,8 @@ import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "mqtt"))
 from unittest.mock import MagicMock, patch
 
 spec = importlib.util.spec_from_file_location(

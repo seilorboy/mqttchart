@@ -1,7 +1,7 @@
 """Raw MQTT archive and browser view. Run one instance per MQTT client ID."""
 import base64
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 import os
 import time
@@ -10,6 +10,7 @@ from flask import Flask, jsonify, render_template, request
 import mysql.connector
 import paho.mqtt.client as mqtt
 from waitress import serve
+from solar import BUCKETS, aggregate, topic_map
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -99,7 +100,43 @@ def serialize(row):
 
 @app.get("/")
 def index():
+    return render_template("solar.html")
+
+
+@app.get("/messages")
+def raw_messages():
     return render_template("index.html")
+
+
+@app.get("/api/solar")
+def solar():
+    try:
+        hours = int(request.args.get("hours", "6"))
+        if hours not in BUCKETS:
+            raise ValueError
+    except ValueError:
+        return jsonify(error="hours must be 1, 6 or 24"), 400
+    prefix = os.environ.get("SHELLY_TOPIC_PREFIX", "shellies/shellyem3-C8C9A316D627").rstrip("/")
+    topics = list(topic_map(prefix))
+    end = datetime.now(timezone.utc).replace(tzinfo=None)
+    start = end - timedelta(hours=hours)
+    with database() as conn:
+        with conn.cursor(dictionary=True) as cur:
+            placeholders = ", ".join(["%s"] * len(topics))
+            cur.execute(
+                "SELECT id, received_at, topic, payload FROM mqtt_messages "
+                "WHERE received_at >= %s AND received_at < %s "
+                f"AND topic IN ({placeholders})",
+                (start, end, *topics),
+            )
+            def rows():
+                while True:
+                    batch = cur.fetchmany(1000)
+                    if not batch:
+                        return
+                    yield from batch
+            result = aggregate(rows(), prefix, start, end, BUCKETS[hours])
+    return jsonify(**result, **state)
 
 
 @app.get("/api/messages")
