@@ -1,0 +1,48 @@
+name: han-mqtt
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MQTT_DB_ROOT_PASSWORD:?Set MQTT_DB_ROOT_PASSWORD in .env.mqtt}
+      MYSQL_DATABASE: mqtt_data
+      MYSQL_USER: mqtt_app
+      MYSQL_PASSWORD: ${MQTT_DB_PASSWORD:?Set MQTT_DB_PASSWORD in .env.mqtt}
+    volumes:
+      - mqtt_db_data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u "$$MYSQL_USER" "$$MYSQL_DATABASE" -e "SELECT 1"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  app:
+    build: ./mqtt
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${MQTT_WEB_BIND:-127.0.0.1}:${MQTT_WEB_PORT:-8082}:5000"
+    environment:
+      DB_HOST: db
+      DB_NAME: mqtt_data
+      DB_USER: mqtt_app
+      DB_PASSWORD: ${MQTT_DB_PASSWORD:?Set MQTT_DB_PASSWORD in .env.mqtt}
+      MQTT_HOST: ${MQTT_HOST:?Set MQTT_HOST in .env.mqtt}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT_TOPIC: ${MQTT_TOPIC:-han/#}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-han-mqtt-storage}
+      MQTT_TLS: ${MQTT_TLS:-false}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mqtt_db_data:
